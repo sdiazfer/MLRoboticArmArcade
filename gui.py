@@ -33,6 +33,9 @@ class GUIManager:
         link_radius = max([param[0] for param in self.arm.dh_params]) * 0.02  # 2% of the largest 'a'
         joint_radius = link_radius * 2
 
+        # Add a ground plane (a white flat plane)
+        ground_plane = box(pos=vector(0, 0, -0.5), size=vector(100, 100, 0.1), color=color.white, opacity=0.6)
+
         # Create links and joints
         for i in range(len(self.arm.dh_params)):
             # Links (Blue Cylinders)
