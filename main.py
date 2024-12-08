@@ -1,6 +1,7 @@
 import numpy as np
 from robotic_arm import RoboticArm
 from gui import GUIManager
+from time import sleep
 
 if __name__ == "__main__":
     dh_params = [
@@ -13,3 +14,6 @@ if __name__ == "__main__":
     ]
     arm = RoboticArm(dh_params)
     gui = GUIManager(arm)
+
+    while True:
+        sleep(1)

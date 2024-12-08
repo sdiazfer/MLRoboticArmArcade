@@ -1,12 +1,18 @@
+from copyreg import pickle
+
 from vpython import *
 import numpy as np
+import price
 
 class GUIManager:
     def __init__(self, arm):
         self.arm = arm
         # Adjust the center and range to fit the larger robot dimensions
-        self.scene = canvas(title="Arcade Robotic Arm Simulator", width=800, height=600,
-                            center=vector(0, 0, 10), range=30)
+        self.scene = canvas(title="Arcade Robotic Arm Simulator", width=800, height=600)
+        self.scene.camera.pos = vector(45,-45,45)
+        self.scene.camera.axis = vector(-45,45,-45)
+        self.scene.up = vector(0,0,1)
+
         self.joints = []  # List to hold joint spheres
         self.links = []   # List to hold link cylinders
         self.sliders = []  # List to hold sliders
@@ -42,6 +48,13 @@ class GUIManager:
             self.sliders.append(slider_ctrl)
             wtext(text="\n")
 
+        # Create Price list
+        self.prices = []
+        for i in range(5):
+            temp = price.Price()
+            self.prices.append(sphere(pos = temp.pos,radius = 2.0,color = color.green))
+
+
         # Add Randomize and Reset Buttons
         self.randomize_button = button(text="Randomize", bind=self.randomize)
         self.reset_button = button(text="Reset", bind=self.reset_arm)
@@ -72,6 +85,8 @@ class GUIManager:
 
             # Move to the next position
             pos = new_pos
+
+
 
     def update_angle(self, slider):
         """
