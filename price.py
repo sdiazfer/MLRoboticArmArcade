@@ -15,7 +15,6 @@ class Price:
         :return: boolean
         """
         d = mag(ee_pos-self.pos)
-        print(d)
         if d<2:
             return True
         else:

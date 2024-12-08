@@ -89,11 +89,10 @@ class GUIManager:
 
             # Move to the next position
             pos = new_pos
-            print(pos)
-            for i in range(len(self.prices)):
-                if self.prices[i].pickDet(pos):
-                    del self.prices[i]
-                    self.priceSphere[i].visible = False
+
+        for i in range(len(self.prices)):
+            if self.prices[i].pickDet(pos):
+                self.priceSphere[i].visible = False
 
 
 
