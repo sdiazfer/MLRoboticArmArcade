@@ -3,6 +3,8 @@ from copyreg import pickle
 from vpython import *
 import numpy as np
 import price
+from price import Price
+
 
 class GUIManager:
     def __init__(self, arm):
@@ -49,10 +51,12 @@ class GUIManager:
             wtext(text="\n")
 
         # Create Price list
+        self.priceSphere = []
         self.prices = []
         for i in range(5):
             temp = price.Price()
-            self.prices.append(sphere(pos = temp.pos,radius = 2.0,color = color.green))
+            self.prices.append(temp)
+            self.priceSphere.append(sphere(pos = temp.pos,radius = 2.0,color = color.green))
 
 
         # Add Randomize and Reset Buttons
@@ -85,6 +89,12 @@ class GUIManager:
 
             # Move to the next position
             pos = new_pos
+            print(pos)
+            for i in range(len(self.prices)):
+                if self.prices[i].pickDet(pos):
+                    del self.prices[i]
+                    self.priceSphere[i].visible = False
+
 
 
 
