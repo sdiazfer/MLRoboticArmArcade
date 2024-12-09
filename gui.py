@@ -7,21 +7,18 @@ import price
 class GUIManager:
     def __init__(self, arm):
         self.arm = arm
-        # Adjust the center and range to fit the larger robot dimensions
+        # create the canvas and adjust the camera
         self.scene = canvas(title="Arcade Robotic Arm Simulator", width=800, height=600)
         self.scene.camera.pos = vector(25,-25,25)
         self.scene.camera.axis = vector(-25,25,-25)
         self.scene.up = vector(0,0,1)
 
+        #Initailizing variables needed
         self.joints = []  # List to hold joint spheres
         self.links = []   # List to hold link cylinders
         self.sliders = []  # List to hold sliders
         self.priceSphere = []  # List to hold price sphere objects
         self.prices = []  # List to hold the pos of the prices
-
-        self.randomize_button = button(text="Randomize", bind=self.randomize)
-        self.reset_button = button(text="Reset", bind=self.reset_arm)
-        self.status = wtext(text=" Status: Ready\n")  # Status text next to buttons
 
         self.setup_scene()  # Setting up the scene
         self.update_scene()  # Update positions after setup
@@ -30,6 +27,12 @@ class GUIManager:
         """
         Initialize the VPython 3D scene and robotic arm visualization.
         """
+        self.randomize_button = button(text="Randomize", bind=self.randomize)
+        self.reset_button = button(text="Reset", bind=self.reset_arm)
+        self.status = wtext(text=" Status: Ready\n")  # Status text next to buttons
+
+        # Add a ground plane (a white flat plane)
+        ground_plane = box(pos=vector(0, 0, -0.5), size=vector(100, 100, 0.1), color=color.white, opacity=0.6)
 
         # Adjust radii based on the scale of the robot
         link_radius = max([param[0] for param in self.arm.dh_params]) * 0.02  # 2% of the largest 'a'
@@ -37,15 +40,6 @@ class GUIManager:
 
         # Base Joint (Joint 1)
         base = sphere(pos=vector(0, 0, 0), radius=joint_radius * 1.5, color=color.red)
-
-        # Add a ground
-        ground_plane = box(
-            pos=vector(0, 0, -0.5),  # Align with the base's Z position
-            size=vector(100, 100, 0.1),
-            color=color.white,
-            opacity=0.6
-        )
-        
         self.joints.append(base)
 
         # x = cylinder(pos=vector(0, 0, 0), axis=vector(5, 0, 0), radius=link_radius * 2, color=color.cyan)
