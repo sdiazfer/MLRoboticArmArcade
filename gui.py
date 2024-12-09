@@ -1,9 +1,7 @@
-from copyreg import pickle
-
 from vpython import *
 import numpy as np
 import price
-from price import Price
+
 
 
 class GUIManager:
@@ -11,31 +9,39 @@ class GUIManager:
         self.arm = arm
         # Adjust the center and range to fit the larger robot dimensions
         self.scene = canvas(title="Arcade Robotic Arm Simulator", width=800, height=600)
-        self.scene.camera.pos = vector(45,-45,45)
-        self.scene.camera.axis = vector(-45,45,-45)
+        self.scene.camera.pos = vector(25,-25,25)
+        self.scene.camera.axis = vector(-25,25,-25)
         self.scene.up = vector(0,0,1)
 
         self.joints = []  # List to hold joint spheres
         self.links = []   # List to hold link cylinders
         self.sliders = []  # List to hold sliders
-        self.setup_scene()
+        self.priceSphere = []  # List to hold price sphere objects
+        self.prices = []  # List to hold the pos of the prices
+
+        self.randomize_button = button(text="Randomize", bind=self.randomize)
+        self.reset_button = button(text="Reset", bind=self.reset_arm)
+        self.status = wtext(text=" Status: Ready\n")  # Status text next to buttons
+
+        self.setup_scene()  # Setting up the scene
         self.update_scene()  # Update positions after setup
 
     def setup_scene(self):
         """
         Initialize the VPython 3D scene and robotic arm visualization.
         """
-        # Base Joint (Joint 1)
-        base = sphere(pos=vector(0, 0, 0), radius=1.0, color=color.red)
-        self.joints.append(base)
 
         # Adjust radii based on the scale of the robot
         link_radius = max([param[0] for param in self.arm.dh_params]) * 0.02  # 2% of the largest 'a'
         joint_radius = link_radius * 2
 
-        # Add a ground plane (a white flat plane)
-        ground_plane = box(pos=vector(0, 0, -0.5), size=vector(100, 100, 0.1), color=color.white, opacity=0.6)
+        # Base Joint (Joint 1)
+        base = sphere(pos=vector(0, 0, 0), radius=joint_radius * 1.5, color=color.red)
+        self.joints.append(base)
 
+        # x = cylinder(pos=vector(0, 0, 0), axis=vector(5, 0, 0), radius=link_radius * 2, color=color.cyan)
+        # y = cylinder(pos=vector(0, 0, 0), axis=vector(0, 5, 0), radius=link_radius * 2, color=color.blue)
+        # z = cylinder(pos=vector(0, 0, 0), axis=vector(0, 0, 5), radius=link_radius * 2, color=color.green)
         # Create links and joints
         for i in range(len(self.arm.dh_params)):
             # Links (Blue Cylinders)
@@ -49,62 +55,39 @@ class GUIManager:
         # Add Sliders for Manual Control
         for i in range(len(self.arm.dh_params)):
             wtext(text=f"Joint {i+1}: ")
-            slider_ctrl = slider(min=-180, max=180, value=0, length=200, bind=self.update_angle, right=15)
+            slider_ctrl = slider(min = self.arm.joint_limit[i][0],
+                                 max = self.arm.joint_limit[i][1],
+                                 length = 200,
+                                 bind = self.update_angle,
+                                 value = 0,
+                                 right = 15
+                                 )
             self.sliders.append(slider_ctrl)
             wtext(text="\n")
 
-        # Create Price list
+        # Create Prices
         self.priceSphere = []
         self.prices = []
         for i in range(5):
             temp = price.Price()
             self.prices.append(temp)
-            self.priceSphere.append(sphere(pos = temp.pos,radius = 2.0,color = color.green))
-
-
-        # Add Randomize and Reset Buttons
-        self.randomize_button = button(text="Randomize", bind=self.randomize)
-        self.reset_button = button(text="Reset", bind=self.reset_arm)
-        self.status = wtext(text=" Status: Ready")  # Status text next to buttons
+            self.priceSphere.append(sphere(pos = temp.pos,radius = 1.5,color = color.green))
 
     def update_scene(self):
         """
         Update the 3D visualization based on the current joint angles.
         """
-        t = np.eye(4)  # Start with the identity matrix
         pos = vector(0, 0, 0)  # Initial position
+        joint_pos = self.arm.get_joint_pos()
 
         for i, (link, joint) in enumerate(zip(self.links, self.joints[1:])):
-            # Compute the transformation matrix for the current joint
-            a, alpha, d, theta_offset = self.arm.dh_params[i]
-            theta = self.arm.joint_angles[i] + theta_offset
-            t = np.dot(t, self.arm.dh_matrix(a, alpha, d, theta))
-
-            # Extract the new position from the transformation matrix
-            new_pos = vector(t[0, 3], t[1, 3], t[2, 3])
-
-            # Update the link's position and orientation
-            link.pos = pos
-            link.axis = new_pos - pos
-
-            # Update the joint's position
-            joint.pos = new_pos
-
-            # Move to the next position
-            pos = new_pos
-            print(pos)
-            for i in range(len(self.prices)):
-                if self.prices[i].pickDet(pos):
-                    del self.prices[i]
-                    self.priceSphere[i].visible = False
-
+            joint.pos = joint_pos[i+1]
+            link.pos = joint_pos[i]
+            link.axis = joint_pos[i+1] - joint_pos[i]
 
         for i in range(len(self.prices)):
-            if self.prices[i].pickDet(pos):
+            if self.prices[i].pickDet(joint_pos[-1]):
                 self.priceSphere[i].visible = False
-
-
-
 
     def update_angle(self, slider):
         """
@@ -133,6 +116,6 @@ class GUIManager:
         for slider in self.sliders:
             slider.value = 0
         self.update_scene()
-        self.status.text = " Status: Reset"
+        self.status.text = " Status: Reset\n"
 
 

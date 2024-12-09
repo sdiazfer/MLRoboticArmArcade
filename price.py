@@ -1,11 +1,18 @@
 import random
+
+import numpy as np
+from anyio import sleep
 from vpython import vector,mag
 
 class Price:
     def __init__(self):
-        self.x = random.uniform(0,20)
-        self.y = random.uniform(0,20)
-        self.z = random.uniform(0,20)
+        r = random.uniform(2,24)
+        theta = random.uniform(-np.pi / 2, np.pi / 2)
+        alpha = random.uniform(0, np.pi / 2)
+
+        self.x = r * np.cos(theta) * np.sin(alpha)
+        self.y = r * np.sin(theta) * np.sin(alpha)
+        self.z = r * np.cos(alpha)
         self.pos = vector(self.x,self.y,self.z)
 
     def pickDet(self,ee_pos):
@@ -15,7 +22,7 @@ class Price:
         :return: boolean
         """
         d = mag(ee_pos-self.pos)
-        if d<2:
+        if d<1.5:
             return True
         else:
             return False
