@@ -6,6 +6,7 @@ import price
 
 class GUIManager:
     def __init__(self, arm):
+        self.caught_count = 0
         self.arm = arm
         # create the canvas and adjust the camera
         self.scene = canvas(title="Arcade Robotic Arm Simulator", width=800, height=600)
@@ -88,9 +89,15 @@ class GUIManager:
             link.pos = joint_pos[i]
             link.axis = joint_pos[i+1] - joint_pos[i]
 
+        
         for i in range(len(self.prices)):
-            if self.prices[i].pickDet(joint_pos[-1]):
+            if self.prices[i].pickDet(joint_pos[-1]) and self.priceSphere[i].visible:
                 self.priceSphere[i].visible = False
+                self.caught_count += 1
+                self.status.text = f" Status: You caught a prize! Total caught: {self.caught_count}\n"
+
+        if self.caught_count == len(self.prices):
+            self.status.text = "Congratulations! You caught all the prizes!"
 
     def update_angle(self, slider):
         """
