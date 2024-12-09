@@ -99,6 +99,11 @@ class GUIManager:
                     self.priceSphere[i].visible = False
 
 
+        for i in range(len(self.prices)):
+            if self.prices[i].pickDet(pos):
+                self.priceSphere[i].visible = False
+
+
 
 
     def update_angle(self, slider):
