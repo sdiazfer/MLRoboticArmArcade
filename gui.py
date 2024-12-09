@@ -37,6 +37,15 @@ class GUIManager:
 
         # Base Joint (Joint 1)
         base = sphere(pos=vector(0, 0, 0), radius=joint_radius * 1.5, color=color.red)
+
+        # Add a ground
+        ground_plane = box(
+            pos=vector(0, 0, -0.5),  # Align with the base's Z position
+            size=vector(100, 100, 0.1),
+            color=color.white,
+            opacity=0.6
+        )
+        
         self.joints.append(base)
 
         # x = cylinder(pos=vector(0, 0, 0), axis=vector(5, 0, 0), radius=link_radius * 2, color=color.cyan)
