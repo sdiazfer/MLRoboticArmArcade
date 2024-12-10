@@ -6,34 +6,28 @@ import price
 
 class GUIManager:
     def __init__(self, arm):
-        self.caught_count = 0
         self.arm = arm
-        # create the canvas and adjust the camera
-        self.scene = canvas(title="Arcade Robotic Arm Simulator", width=800, height=600)
-        self.scene.camera.pos = vector(25,-25,25)
-        self.scene.camera.axis = vector(-25,25,-25)
-        self.scene.up = vector(0,0,1)
+        self.scene = canvas(title="Arcade Robotic Arm Simulator", width=1000, height=600)  # 宽度增加到1000
+        self.scene.camera.pos = vector(25, -25, 25)
+        self.scene.camera.axis = vector(-25, 25, -25)
+        self.scene.up = vector(0, 0, 1)
 
-        #Initailizing variables needed
-        self.joints = []  # List to hold joint spheres
-        self.links = []   # List to hold link cylinders
-        self.sliders = []  # List to hold sliders
-        self.priceSphere = []  # List to hold price sphere objects
-        self.prices = []  # List to hold the pos of the prices
+        self.joints = []
+        self.links = []
+        self.sliders = []
+        self.priceSphere = []
+        self.prices = []
 
-        self.setup_scene()  # Setting up the scene
-        self.update_scene()  # Update positions after setup
+        self.setup_scene()
+        self.setup_controls()
+        self.update_scene()
+
+        self.price_picked_count = 0
 
     def setup_scene(self):
         """
         Initialize the VPython 3D scene and robotic arm visualization.
         """
-        self.randomize_button = button(text="Randomize", bind=self.randomize)
-        self.reset_button = button(text="Reset", bind=self.reset_arm)
-        self.status = wtext(text=" Status: Ready\n")  # Status text next to buttons
-
-        # Add a ground plane (a white flat plane)
-        ground_plane = box(pos=vector(0, 0, -0.5), size=vector(100, 100, 0.1), color=color.white, opacity=0.6)
 
         # Adjust radii based on the scale of the robot
         link_radius = max([param[0] for param in self.arm.dh_params]) * 0.02  # 2% of the largest 'a'
@@ -41,11 +35,16 @@ class GUIManager:
 
         # Base Joint (Joint 1)
         base = sphere(pos=vector(0, 0, 0), radius=joint_radius * 1.5, color=color.red)
-        self.joints.append(base)
 
-        # x = cylinder(pos=vector(0, 0, 0), axis=vector(5, 0, 0), radius=link_radius * 2, color=color.cyan)
-        # y = cylinder(pos=vector(0, 0, 0), axis=vector(0, 5, 0), radius=link_radius * 2, color=color.blue)
-        # z = cylinder(pos=vector(0, 0, 0), axis=vector(0, 0, 5), radius=link_radius * 2, color=color.green)
+
+        # Add a ground plane (a white flat plane)
+        ground_plane = box(
+            pos=vector(0, 0, -0.5),  # Align with the base's Z position
+            size=vector(100, 100, 0.1),
+            color=color.white,
+            opacity=0.6
+        )
+
         # Create links and joints
         for i in range(len(self.arm.dh_params)):
             # Links (Blue Cylinders)
@@ -56,26 +55,15 @@ class GUIManager:
             joint = sphere(pos=vector(0, 0, 0), radius=joint_radius, color=color.red)
             self.joints.append(joint)
 
-        # Add Sliders for Manual Control
-        for i in range(len(self.arm.dh_params)):
-            wtext(text=f"Joint {i+1}: ")
-            slider_ctrl = slider(min = self.arm.joint_limit[i][0],
-                                 max = self.arm.joint_limit[i][1],
-                                 length = 200,
-                                 bind = self.update_angle,
-                                 value = 0,
-                                 right = 15
-                                 )
-            self.sliders.append(slider_ctrl)
-            wtext(text="\n")
-
         # Create Prices
-        self.priceSphere = []
-        self.prices = []
         for i in range(5):
             temp = price.Price()
             self.prices.append(temp)
-            self.priceSphere.append(sphere(pos = temp.pos,radius = 1.5,color = color.green))
+            price_sphere = sphere(pos=temp.pos, radius=1.5, color=color.green)
+            self.priceSphere.append(price_sphere)
+
+
+
 
     def update_scene(self):
         """
@@ -89,22 +77,26 @@ class GUIManager:
             link.pos = joint_pos[i]
             link.axis = joint_pos[i+1] - joint_pos[i]
 
-        
+
         for i in range(len(self.prices)):
-            if self.prices[i].pickDet(joint_pos[-1]) and self.priceSphere[i].visible:
+            if self.prices[i].pickDet(joint_pos[-1]):
                 self.priceSphere[i].visible = False
-                self.caught_count += 1
-                self.status.text = f" Status: You caught a prize! Total caught: {self.caught_count}\n"
+                self.price_picked_count += 1  # Increment counter
+                self.status.text = f" Status: {self.price_picked_count} Prices Picked\n"
 
-        if self.caught_count == len(self.prices):
-            self.status.text = "Congratulations! You caught all the prizes!"
 
-    def update_angle(self, slider):
+    # def update_angle(self, slider):
+    #     """
+    #     Update joint angles when sliders are moved.
+    #     """
+    #     idx = self.sliders.index(slider)
+    #     self.arm.joint_angles[idx] = radians(slider.value)
+    #     self.update_scene()
+    def update_angle(self, idx, value):
         """
-        Update joint angles when sliders are moved.
+        更新关节角度并重绘场景。
         """
-        idx = self.sliders.index(slider)
-        self.arm.joint_angles[idx] = radians(slider.value)
+        self.arm.joint_angles[idx] = radians(float(value))
         self.update_scene()
 
     def randomize(self, button=None):
@@ -125,7 +117,171 @@ class GUIManager:
         self.arm.reset_arm()
         for slider in self.sliders:
             slider.value = 0
-        self.update_scene()
+        # Reset prices
+        self.price_picked_count = 0
+        for sphere in self.priceSphere:
+            sphere.visible = True
         self.status.text = " Status: Reset\n"
+        self.update_scene()
+
+    def setup_controls(self):
+        """
+        使用 HTML 和 CSS 将滑块和按钮放置到右侧的 Controls 区域。
+        """
+        self.scene.append_to_title("""
+            <style>
+                .control-panel {
+                    position: absolute;
+                    top: 10%;
+                    right: 20%;
+                    width: 300px;
+                    background-color: #f9f9f9;
+                    border: 1px solid #ddd;
+                    border-radius: 10px;
+                    padding: 15px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    font-family: Arial, sans-serif;
+                }
+                .control-panel h3 {
+                    margin-top: 0;
+                    text-align: center;
+                }
+                .control-panel label {
+                    display: block;
+                    margin-bottom: 5px;
+                }
+                .control-panel input[type="range"] {
+                    width: 80%;
+                    margin-bottom: 10px;
+                }
+                .control-panel button {
+                    width: 100px;
+                    background-color: #007bff;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 8px 12px;
+                    margin: 5px auto;
+                    cursor: pointer;
+                    font-size: 14px;
+                    display: block;
+                }
+                .control-panel button.reset {
+                    background-color: #6c757d;
+                }
+            </style>
+            <div class="control-panel">
+                <h3>Controls</h3>
+                <label for="slider1">Joint 1:</label>
+                <input type="range" id="slider1" min="-90" max="90" value="0" 
+                oninput="scene.get_canvas().control.update_angle(0, this.value)">
+
+                <label for="slider2">Joint 2:</label>
+                <input type="range" id="slider2" min="-90" max="90" value="0" 
+                oninput="scene.get_canvas().control.update_angle(1, this.value)">
+
+                <label for="slider3">Joint 3:</label>
+                <input type="range" id="slider3" min="-170" max="170" value="0" 
+                oninput="scene.get_canvas().control.update_angle(2, this.value)">
+
+                <label for="slider4">Joint 4:</label>
+                <input type="range" id="slider4" min="-170" max="170" value="0" 
+                oninput="scene.get_canvas().control.update_angle(3, this.value)">
+
+                <label for="slider5">Joint 5:</label>
+                <input type="range" id="slider5" min="-170" max="170" value="0" 
+                oninput="scene.get_canvas().control.update_angle(4, this.value)">
+
+                <button onclick="scene.get_canvas().control.randomize()">Randomize</button>
+                <button class="reset" onclick="scene.get_canvas().control.reset_arm()">Reset</button>
+            </div>
+        """)
+
+        self.scene.control = self
+
+
+'''
+    def setup_controls(self):
+        """
+        设置控件和布局，使用HTML和CSS进行完整布局。
+        """
+        self.scene.append_to_title("""
+        <style>
+
+            .control-panel {
+                position: absolute;
+                top: 10%;
+                right: 20%;
+                width: 320px;
+                background-color: #f9f9f9;
+                border: 1px solid #ddd;
+                border-radius: 10px;
+                padding: 15px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                font-family: Arial, sans-serif;
+            }
+            .control-panel h3 {
+                margin-top: 0;
+                text-align: center;
+            }
+            .control-panel label {
+                display: block;
+                margin-bottom: 5px;
+            }
+            .control-panel input[type="range"] {
+                width: 80%;
+                margin-bottom: 10px;
+            }
+            .control-panel button {
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 12px;
+                margin: 5px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+            .control-panel button.reset {
+                background-color: #6c757d;
+            }
+            .control-panel div.buttons {
+                text-align: center;
+                margin-top: 15px;
+            }
+        </style>
+        <div class="control-panel">
+            <h3>Controls</h3>
+            <label for="slider1">Joint 1:</label>
+            <input type="range" id="slider1" min="-90" max="90" value="0" 
+            oninput="scene.get_canvas().control.update_angle(1, this.value)">
+
+            <label for="slider2">Joint 2:</label>
+            <input type="range" id="slider2" min="-90" max="90" value="0" 
+            oninput="scene.get_canvas().control.update_angle(2, this.value)">
+
+            <label for="slider3">Joint 3:</label>
+            <input type="range" id="slider3" min="-170" max="170" value="0" 
+            oninput="scene.get_canvas().control.update_angle(3, this.value)">
+
+            <label for="slider4">Joint 4:</label>
+            <input type="range" id="slider4" min="-170" max="170" value="0" 
+            oninput="scene.get_canvas().control.update_angle(4, this.value)">
+
+            <label for="slider5">Joint 5:</label>
+            <input type="range" id="slider5" min="-170" max="170" value="0" 
+            oninput="scene.get_canvas().control.update_angle(5, this.value)">
+
+            <div class="buttons">
+                <button onclick="scene.get_canvas().control.randomize()">Randomize</button>
+                <button class="reset" onclick="scene.get_canvas().control.reset_arm()">Reset</button>
+            </div>
+        </div>
+        """)
+
+        # 绑定Python控制器到scene.control，供HTML调用Python方法
+        self.scene.control = self
+
+'''
 
 
