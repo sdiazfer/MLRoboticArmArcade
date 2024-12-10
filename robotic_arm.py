@@ -1,5 +1,5 @@
 import numpy as np
-from vpython import vector
+from vpython import vector,mag
 
 class RoboticArm:
     def __init__(self, dh_params=None, joint_limit = None):
@@ -21,7 +21,6 @@ class RoboticArm:
             ]
         self.joint_angles = [0] * len(self.dh_params)  # Initialize joint angles in radians
         self.joint_limit = joint_limit
-        print(joint_limit[1][1])
 
     def dh_matrix(self, a, alpha, d, theta):
         """
@@ -40,7 +39,7 @@ class RoboticArm:
         """
         self.joint_angles = [0] * len(self.dh_params)
 
-    def get_joint_pos(self):
+    def get_joint_pos(self,joint_angles):
         """
         Calculates the position of given joint num.
         :return: pos of join
@@ -49,6 +48,46 @@ class RoboticArm:
         t = np.eye(4)
         for i in range(len(self.dh_params)):
             a, alpha, d, theta = self.dh_params[i]
-            t = np.dot(t, self.dh_matrix(a, alpha, d, theta + self.joint_angles[i]))
+            t = np.dot(t, self.dh_matrix(a, alpha, d, theta + joint_angles[i]))
             joint_pos.append(vector(t[0, 3], t[1, 3], t[2, 3]))
         return joint_pos
+
+    def dirKin(self,joint_angles):
+        ee_pos = self.get_joint_pos(joint_angles)[-1]
+        return ee_pos
+
+    def sequence_planner(self,prices):
+        # find a sequence of prices to collect
+        num_of_prices = len(prices)
+        seq = [self.dirKin(self.joint_angles)]
+        seq = seq + [0] * num_of_prices
+        for j in range(num_of_prices):
+            d = 1000
+            for price in prices:
+                if (mag(seq[j] - price.pos)) < d:
+                    seq[j+1] = price.pos
+                    d = (mag(seq[j] - price.pos))
+                    m = price
+            prices.remove(m)
+        return seq
+
+    def trajectory_planner(self,seq,ee_v):
+        trajectory = [seq[0]]
+        step_count = []
+
+        for i in range(len(seq)-1):
+            err = 10
+            dir = seq[i+1] - trajectory[-1]
+            dir = dir.norm()
+            old_point = trajectory[-1]
+            step = 0
+            while err > ee_v * 0.01:
+                step += 1
+                new_point = old_point + dir * ee_v * 0.01
+                err = mag(seq[i+1] - new_point)
+                old_point = new_point
+            trajectory.append(new_point)
+            step_count.append(step)
+        return trajectory,step_count
+
+
