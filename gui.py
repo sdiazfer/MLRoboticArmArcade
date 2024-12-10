@@ -1,6 +1,6 @@
 from vpython import *
 import numpy as np
-import price
+from price import Price
 
 
 
@@ -20,7 +20,7 @@ class GUIManager:
         self.sliders = []  # List to hold sliders
         self.priceSphere = []  # List to hold price sphere objects
         self.prices = []  # List to hold the pos of the prices
-
+        
         self.setup_scene()  # Setting up the scene
         self.update_scene()  # Update positions after setup
 
@@ -30,7 +30,9 @@ class GUIManager:
         """
         self.randomize_button = button(text="Randomize", bind=self.randomize)
         self.reset_button = button(text="Reset", bind=self.reset_arm)
+        self.generate_price_button = button(text = "Generate Prices", bind = self.generate_price)
         self.status = wtext(text=" Status: Ready\n")  # Status text next to buttons
+        self.run_machine_button = button(text="Run Machine", bind=self.run_machine)
 
         # Add a ground plane (a white flat plane)
         ground_plane = box(pos=vector(0, 0, -0.5), size=vector(100, 100, 0.1), color=color.white, opacity=0.6)
@@ -70,19 +72,15 @@ class GUIManager:
             wtext(text="\n")
 
         # Create Prices
-        self.priceSphere = []
-        self.prices = []
-        for i in range(5):
-            temp = price.Price()
-            self.prices.append(temp)
-            self.priceSphere.append(sphere(pos = temp.pos,radius = 1.5,color = color.green))
+        self.priceGenerated = False
+        self.generate_price()
 
     def update_scene(self):
         """
         Update the 3D visualization based on the current joint angles.
         """
         pos = vector(0, 0, 0)  # Initial position
-        joint_pos = self.arm.get_joint_pos()
+        joint_pos = self.arm.get_joint_pos(self.arm.joint_angles
 
         for i, (link, joint) in enumerate(zip(self.links, self.joints[1:])):
             joint.pos = joint_pos[i+1]
@@ -127,5 +125,26 @@ class GUIManager:
             slider.value = 0
         self.update_scene()
         self.status.text = " Status: Reset\n"
+
+    def run_machine(self):
+        self.reset_arm()
+        seq = self.arm.sequence_planner(self.prices)
+        ee_v = 1
+        trajectory, step_count = self.arm.trajectory_planner(seq,ee_v)
+
+    def generate_price(self):
+        self.reset_arm()
+        if self.priceGenerated:
+            self.prices.clear()
+            for price in self.priceSphere:
+                price.visible = False
+                del price
+            self.priceSphere.clear()
+
+        for i in range(5):
+            temp = Price()
+            self.prices.append(temp)
+            self.priceSphere.append(sphere(pos=temp.pos, radius=1.5, color=color.green))
+        self.priceGenerated = True
 
 
