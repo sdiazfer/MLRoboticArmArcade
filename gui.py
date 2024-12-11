@@ -71,7 +71,6 @@ class GUIManager:
         # Create Prices
         self.priceGenerated = False
         self.generate_price()
-        print("price created")
 
     def update_scene(self):
         """
@@ -84,7 +83,6 @@ class GUIManager:
             joint.pos = joint_pos[i + 1]
             link.pos = joint_pos[i]
             link.axis = joint_pos[i + 1] - joint_pos[i]
-
         ee_pos = self.arm.dirKin(self.arm.joint_angles)
         for i in range(len(self.prices) - 1, -1, -1):
             if self.prices[i].pickDet(ee_pos):
@@ -92,10 +90,10 @@ class GUIManager:
                 self.priceSphere.pop(i)
                 self.prices.pop(i)
                 self.caught_count += 1
-                self.status.text = f" Status: You caught a prize! Total caught: {self.caught_count}\n"
+                self.status.text = f" Status: Caught a prize! Total caught: {self.caught_count}\n"
 
         if self.caught_count == 5:
-            self.status.text = "Congratulations! You caught all the prizes!\n"
+            self.status.text = " Status: Congratulations! Caught all the prizes!\n"
 
     def update_angle(self, slider):
         """
@@ -125,11 +123,13 @@ class GUIManager:
 
     def run_machine(self):
         self.reset()
-        self.status.text = ""
+        self.status.text = " Status: Thinking\n"
         seq = self.arm.sequence_planner(self.prices)
         ee_v = 1
         self.arm.trajectory_planner(seq, ee_v)
 
+        self.reset()
+        self.status.text = " Status: Trajectory Generation Complete, Now running\n"
         file = open("Trajectory.txt")
         for line in file:
             self.arm.joint_angles = list(map(float, line.strip().split(',')))
