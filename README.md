@@ -41,3 +41,14 @@ Make sure you have the following installed:
 - Required libraries:
   ```bash
   pip install vpython numpy
+
+## Running
+
+Run the main.py file. 
+You can use the slider to move the arm and collect prizes.
+Use reset button to reset the arm to original position and reset the prizes.
+Use generate prize button to generate a new set of prizes.
+Use run machine button to Auto collect all prizes using a controller.
+
+
+  
