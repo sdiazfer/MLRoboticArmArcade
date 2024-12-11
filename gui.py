@@ -5,9 +5,19 @@ from price import Price
 
 
 class GUIManager:
+    """
+    Manages the graphical user interface (GUI) for the Arcade Robotic Arm Simulator.
+    Includes visualization, user interaction elements, and controls for the robotic arm.
+    """
     def __init__(self, arm):
-        self.caught_count = 0
-        self.arm = arm
+        """
+        Initialize the GUIManager with a robotic arm instance.
+
+        Args:
+            arm: Instance of the robotic arm model, containing DH parameters and joint limits.
+        """
+        self.caught_count = 0 # Counter for prizes caught by the robotic arm
+        self.arm = arm # Reference to the robotic arm instance
         # create the canvas and adjust the camera
         self.scene = canvas(title="Arcade Robotic Arm Simulator", width=800, height=500)
         self.scene.camera.pos = vector(25, -25, 25)
@@ -21,7 +31,8 @@ class GUIManager:
         self.priceSphere = []  # List to hold price sphere objects
         self.prices = []  # List to hold the pos of the prices
         self.prices2 = []  # List to hold the pos of the prices, Duplicate of list above
-
+   
+        # Setup the scene and initialize visualization
         self.setup_scene()  # Setting up the scene
         self.update_scene()  # Update positions after setup
 
@@ -29,6 +40,7 @@ class GUIManager:
         """
         Initialize the VPython 3D scene and robotic arm visualization.
         """
+         # Add GUI control buttons
         self.reset_button = button(text="Reset", bind=self.reset)
         self.generate_price_button = button(text="Generate Prices", bind=self.generate_price)
         self.run_machine_button = button(text="Run Machine", bind=self.run_machine)
@@ -45,7 +57,7 @@ class GUIManager:
         base = sphere(pos=vector(0, 0, 0), radius=joint_radius * 1.5, color=color.red)
         self.joints.append(base)
 
-        # Create links and joints
+       # Create links and joints based on DH parameters
         for i in range(len(self.arm.dh_params)):
             # Links (Blue Cylinders)
             link = cylinder(pos=vector(0, 0, 0), axis=vector(1, 0, 0), radius=link_radius, color=color.blue)
@@ -68,7 +80,7 @@ class GUIManager:
             self.sliders.append(slider_ctrl)
             wtext(text="\n")
 
-        # Create Prices
+        # Generate initial set of prizes
         self.priceGenerated = False
         self.generate_price()
         print("price created")
@@ -80,11 +92,13 @@ class GUIManager:
         pos = vector(0, 0, 0)  # Initial position
         joint_pos = self.arm.get_joint_pos(self.arm.joint_angles)
 
+        # Update link and joint positions in the scene
         for i, (link, joint) in enumerate(zip(self.links, self.joints[1:])):
             joint.pos = joint_pos[i + 1]
             link.pos = joint_pos[i]
             link.axis = joint_pos[i + 1] - joint_pos[i]
 
+        # Check for prize collisions with the end-effector
         ee_pos = self.arm.dirKin(self.arm.joint_angles)
         for i in range(len(self.prices) - 1, -1, -1):
             if self.prices[i].pickDet(ee_pos):
@@ -94,12 +108,16 @@ class GUIManager:
                 self.caught_count += 1
                 self.status.text = f" Status: You caught a prize! Total caught: {self.caught_count}\n"
 
+        # Display a congratulatory message when all prizes are caught
         if self.caught_count == 5:
             self.status.text = "Congratulations! You caught all the prizes!\n"
 
     def update_angle(self, slider):
         """
-        Update joint angles when sliders are moved.
+        Update joint angles when a slider is adjusted.
+
+        Args:
+            slider: The slider control object triggering the update.
         """
         idx = self.sliders.index(slider)
         self.arm.joint_angles[idx] = radians(slider.value)
@@ -108,6 +126,9 @@ class GUIManager:
     def reset(self, button=None):
         """
         Reset the robotic arm to the home position.
+        
+        Args:
+            button: Button triggering the reset (default is None).
         """
         self.arm.reset_arm()
         self.caught_count = 0
@@ -124,6 +145,9 @@ class GUIManager:
 
 
     def run_machine(self):
+        """
+        Execute the automated sequence to catch all prizes.
+        """
         self.reset()
         self.status.text = ""
         seq = self.arm.sequence_planner(self.prices)
@@ -138,6 +162,9 @@ class GUIManager:
         file.close()
 
     def generate_price(self):
+        """
+        Generate a new set of random prizes for the simulation.
+        """
         if self.priceGenerated:
             self.prices.clear()
             for price in self.priceSphere:
