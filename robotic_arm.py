@@ -1,4 +1,6 @@
+
 import numpy as np
+from numpy import sin,cos
 from vpython import vector,mag
 
 class RoboticArm:
@@ -56,6 +58,32 @@ class RoboticArm:
         ee_pos = self.get_joint_pos(joint_angles)[-1]
         return ee_pos
 
+    def jacobian(self,joint_angels):
+        t1,t2,t3,t4,t5 = joint_angels
+        A = 10*cos(t2) + 7*cos(t2+t3) + 5*cos(t2+t3+t4) + 3 * cos(t2+t3+t4+t5)
+        j11 = -sin(t1) * A
+        j12 = cos(t1) * (-10*sin(t2) - 7*sin(t2+t3) - 5*sin(t2+t3+t4) - 3*sin(t2+t3+t4+t5))
+        j13 = cos(t1) * (- 7*sin(t2+t3) - 5*sin(t2+t3+t4) - 3*sin(t2+t3+t4+t5))
+        j14 = cos(t1) * (- 5*sin(t2+t3+t4) - 3*sin(t2+t3+t4+t5))
+        j15 = cos(t1) * (- 3*sin(t2+t3+t4+t5))
+        j21 = cos(t1) * A
+        j22 = sin(t1) * (-10*sin(t2) - 7*sin(t2+t3) - 5*sin(t2+t3+t4) - 3*sin(t2+t3+t4+t5))
+        j23 = sin(t1) * (- 7*sin(t2+t3) - 5*sin(t2+t3+t4) - 3*sin(t2+t3+t4+t5))
+        j24 = sin(t1) * (- 5*sin(t2+t3+t4) - 3*sin(t2+t3+t4+t5))
+        j25 = sin(t1) * (- 3*sin(t2+t3+t4+t5))
+        j31 = 0
+        j32 = A
+        j33 = 7*cos(t2+t3) + 5*cos(t2+t3+t4) + 3 * cos(t2+t3+t4+t5)
+        j34 = 5*cos(t2+t3+t4) + 3 * cos(t2+t3+t4+t5)
+        j35 = 3 * cos(t2+t3+t4+t5)
+
+        j = np.array([
+            [j11, j12, j13, j14, j15],
+            [j21, j22, j23, j24, j25],
+            [j31, j32, j33, j34, j35],
+        ])
+        return j
+
     def sequence_planner(self,prices):
         # find a sequence of prices to collect
         num_of_prices = len(prices)
@@ -74,6 +102,9 @@ class RoboticArm:
     def trajectory_planner(self,seq,ee_v):
         trajectory = [seq[0]]
         step_count = []
+        qc = self.joint_angles
+        pc = self.dirKin(qc)
+        trajectory_file = open("Trajectory.txt", "w")
 
         for i in range(len(seq)-1):
             err = 10
@@ -82,12 +113,46 @@ class RoboticArm:
             old_point = trajectory[-1]
             step = 0
             while err > ee_v * 0.01:
-                step += 1
-                new_point = old_point + dir * ee_v * 0.01
+                new_point = old_point + dir * ee_v * 0.01 * step
                 err = mag(seq[i+1] - new_point)
-                old_point = new_point
+                step = step + 1
+                pd = new_point
+                pc,qc = self.resolved_rate(pd,pc,qc)
+                trajectory_file.writelines(",".join(map(str,qc)) + "\n")
             trajectory.append(new_point)
             step_count.append(step)
-        return trajectory,step_count
+        trajectory_file.close()
+
+
+    def resolved_rate(self,pd,pc,qc):
+        t = 0.01
+        eP = 0.1
+        lambdaP = 2
+        Vmin = 5
+        Vmax = 15
+        delta_p = mag(pd-pc)
+        qc_mat = np.reshape(qc,(5,1))
+        while delta_p>eP:
+            Vmod = self.V(delta_p,lambdaP,Vmin,Vmax,eP)
+            n_cap = pd - pc
+            n_cap.norm()
+            pd_dot = Vmod * n_cap
+            pd_dot = np.array([[pd_dot.x],[pd_dot.y],[pd_dot.z]])
+            j = self.jacobian(qc)
+            qd_dot =  np.dot(np.linalg.pinv(j), pd_dot)
+            qc_mat = qc_mat + qd_dot * t
+            qc = qc_mat.flatten().tolist()
+            pc = self.dirKin(qc)
+            delta_p = mag(pd-pc)
+        return pc,qc
+
+    def V(self,delta_p,lambdaP,Vmin,Vmax,eP):
+        if delta_p/eP>lambdaP:
+            Vmod = Vmax
+        else:
+            Vmod = Vmin + (Vmax - Vmin) * (delta_p - eP) / (eP * (lambdaP - 1))
+        return Vmod
+
+
 
 

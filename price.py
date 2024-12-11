@@ -1,7 +1,5 @@
 import random
-
 import numpy as np
-from anyio import sleep
 from vpython import vector,mag
 
 class Price:
@@ -23,6 +21,7 @@ class Price:
         """
         d = mag(ee_pos-self.pos)
         if d<1.5:
+            print("pick deteceted")
             return True
         else:
             return False
