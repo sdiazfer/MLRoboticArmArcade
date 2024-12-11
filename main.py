@@ -23,6 +23,7 @@ if __name__ == "__main__":
     ]
 
     arm = RoboticArm(dh_params,joint_limits)
+
     gui = GUIManager(arm)
 
     while True:
