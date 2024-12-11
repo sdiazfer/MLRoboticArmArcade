@@ -80,7 +80,7 @@ class GUIManager:
         Update the 3D visualization based on the current joint angles.
         """
         pos = vector(0, 0, 0)  # Initial position
-        joint_pos = self.arm.get_joint_pos(self.arm.joint_angles
+        joint_pos = self.arm.get_joint_pos(self.arm.joint_angles)
 
         for i, (link, joint) in enumerate(zip(self.links, self.joints[1:])):
             joint.pos = joint_pos[i+1]
